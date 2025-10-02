@@ -72,13 +72,20 @@ get_unit_price() {
 }
 
 # Process input file and write output
+# Create the output file with row details in it, start with a header
+echo "time;consumption;total_consumption;unit_price;total_price" >${INPUT_FILE}.OUT
 while IFS=';' read -r time name consumption remark; do
+    # It appears that the file content has changed now, use the second column if third is empty.
+    [ -n "$consumption" ] || consumption="$name"
+    [ -n "$consumption" ] || break
     consumption_val=${consumption/,/.};
     get_unit_price "$time"
     unit_price=$current_price
     total_consumption=$(awk "BEGIN {printf \"%.4f\", $total_consumption + $consumption_val}")
     total_price=$(awk "BEGIN {printf \"%.4f\", $total_price + ($consumption_val * $unit_price)}")
-done < <(tail -n +${header_lines} "$INPUT_FILE")
+    echo "$time;$consumption;$total_consumption;$unit_price;$total_price" >>${INPUT_FILE}.OUT
+done < <(tail -n +${header_lines} "$INPUT_FILE";echo'')
+# The "echo''" above is for a final line that has no line ending
 
 vat="26"
 total_price_vat=$(awk "BEGIN {printf \"%.4f\", $total_price * 1.$vat}")
